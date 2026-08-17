@@ -1,0 +1,7 @@
+[
+  {"question": "Show the top 10 best selling products.", "expected_tables": ["products", "order_items"]},
+  {"question": "Show total revenue by category.", "expected_tables": ["categories", "products", "order_items"]},
+  {"question": "Show the top 5 customers by spending.", "expected_tables": ["customers", "orders"]},
+  {"question": "How many customers are there?", "expected_tables": ["customers"]},
+  {"question": "Show products with ratings above 4.", "expected_tables": ["products"]}
+]
