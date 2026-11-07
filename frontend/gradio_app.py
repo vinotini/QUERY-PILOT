@@ -1,3 +1,5 @@
+
+import os
 import gradio as gr
 
 from agents.orchestrator import NL2SQLOrchestrator
@@ -6,7 +8,15 @@ from visualization.charts import create_chart
 
 
 # ============================================================
-# ORCHESTRATOR
+# CONFIGURATION
+# ============================================================
+
+APP_TITLE = "QUERY PILOT"
+PORT = int(os.environ.get("PORT", 7860))
+
+
+# ============================================================
+# ORCHESTRATOR INITIALIZATION
 # ============================================================
 
 orchestrator = NL2SQLOrchestrator()
@@ -22,6 +32,7 @@ try:
 
 except Exception as exc:
     db_status = f"🔴 Supabase PostgreSQL: ERROR - {exc}"
+    print(f"Database connection error: {exc}")
 
 
 # ============================================================
@@ -31,21 +42,12 @@ except Exception as exc:
 def run_query(question):
 
     if not question or not question.strip():
-
         return (
-            "",
-            "",
-            "",
-            None,
-            None,
-            "",
-            "",
-            "Please enter a question.",
-            "Query failed: Empty question."
+            "", "", "", None, None, "", "", "",
+            "Please enter a question."
         )
 
     try:
-
         result = orchestrator.run(question.strip())
 
         # ----------------------------------------------------
@@ -60,7 +62,7 @@ def run_query(question):
         )
 
         # ----------------------------------------------------
-        # CHART
+        # CHART GENERATION
         # ----------------------------------------------------
 
         chart = None
@@ -88,12 +90,10 @@ def run_query(question):
 
     except Exception as exc:
 
-        print("\n===================================")
-        print("QUERY FAILED")
-        print("===================================")
+        print("\n========== QUERY FAILED ==========")
         print(type(exc).__name__)
         print(exc)
-        print("===================================\n")
+        print("==================================\n")
 
         return (
             "",
@@ -109,13 +109,12 @@ def run_query(question):
 
 
 # ============================================================
-# REFRESH RAG
+# REFRESH RAG SCHEMA
 # ============================================================
 
 def refresh_schema():
 
     try:
-
         orchestrator.refresh_rag()
 
         return (
@@ -131,14 +130,17 @@ def refresh_schema():
 
 
 # ============================================================
-# GRADIO UI
+# GRADIO USER INTERFACE
 # ============================================================
 
-with gr.Blocks(title="QUERY PILOT") as demo:
+with gr.Blocks(
+    title=APP_TITLE,
+    theme=gr.themes.Soft()
+) as demo:
 
     gr.Markdown(
         """
-        # QUERY PILOT
+        # 🚀 QUERY PILOT
 
         ### Transforming Enterprise Data Into Business Intelligence
         """
@@ -148,10 +150,11 @@ with gr.Blocks(title="QUERY PILOT") as demo:
         """
         Ask complex business questions in plain English.
 
-        QUERY PILOT understands your enterprise data schema, retrieves
-        relevant context, generates and validates SQL, automatically
-        self-corrects errors, executes queries, and transforms raw data
-        into meaningful visualizations and actionable business insights.
+        QUERY PILOT understands your enterprise data schema,
+        retrieves relevant context, generates and validates SQL,
+        automatically self-corrects errors, executes queries,
+        and transforms raw data into meaningful visualizations
+        and actionable business insights.
 
         **Ask → Understand → Retrieve → Generate → Validate
         → Self-Correct → Execute → Analyze → Decide**
@@ -169,16 +172,18 @@ with gr.Blocks(title="QUERY PILOT") as demo:
         question = gr.Textbox(
             label="Ask your database",
             placeholder="Example: Show the top 10 products by total sales",
-            lines=3
+            lines=3,
+            scale=4
         )
 
         run_button = gr.Button(
             "Run Query",
-            variant="primary"
+            variant="primary",
+            scale=1
         )
 
     # ========================================================
-    # RAG REFRESH
+    # REFRESH SCHEMA
     # ========================================================
 
     refresh_button = gr.Button(
@@ -193,20 +198,12 @@ with gr.Blocks(title="QUERY PILOT") as demo:
 
     with gr.Tabs():
 
-        # ----------------------------------------------------
-        # QUERY PLAN
-        # ----------------------------------------------------
-
         with gr.Tab("Query Plan"):
 
             plan_output = gr.Textbox(
                 lines=15,
                 label="Planner Agent"
             )
-
-        # ----------------------------------------------------
-        # RAG
-        # ----------------------------------------------------
 
         with gr.Tab("RAG"):
 
@@ -215,10 +212,6 @@ with gr.Blocks(title="QUERY PILOT") as demo:
                 label="Retrieved Schema"
             )
 
-        # ----------------------------------------------------
-        # SQL
-        # ----------------------------------------------------
-
         with gr.Tab("Generated SQL"):
 
             sql_output = gr.Code(
@@ -226,35 +219,19 @@ with gr.Blocks(title="QUERY PILOT") as demo:
                 label="PostgreSQL"
             )
 
-        # ----------------------------------------------------
-        # RESULTS
-        # ----------------------------------------------------
-
         with gr.Tab("Results"):
 
             result_output = gr.Dataframe(
                 interactive=False
             )
 
-        # ----------------------------------------------------
-        # VISUALIZATION
-        # ----------------------------------------------------
-
         with gr.Tab("Visualization"):
 
             chart_output = gr.Plot()
 
-        # ----------------------------------------------------
-        # AI INSIGHTS
-        # ----------------------------------------------------
-
         with gr.Tab("AI Insights"):
 
             insight_output = gr.Markdown()
-
-        # ----------------------------------------------------
-        # AGENT TRACE
-        # ----------------------------------------------------
 
         with gr.Tab("Agent Trace"):
 
@@ -267,10 +244,6 @@ with gr.Blocks(title="QUERY PILOT") as demo:
                 lines=10,
                 label="Correction Log"
             )
-
-        # ----------------------------------------------------
-        # SYSTEM
-        # ----------------------------------------------------
 
         with gr.Tab("System"):
 
@@ -288,7 +261,7 @@ with gr.Blocks(title="QUERY PILOT") as demo:
                 - SQL Correction Agent
                 - Insight Agent
                 - Supabase PostgreSQL
-                - Gradio UI
+                - Gradio Interface
 
                 ### LLM Fallback
 
@@ -303,7 +276,7 @@ with gr.Blocks(title="QUERY PILOT") as demo:
             )
 
     # ========================================================
-    # OUTPUT LIST
+    # OUTPUT COMPONENTS
     # ========================================================
 
     outputs = [
@@ -319,31 +292,43 @@ with gr.Blocks(title="QUERY PILOT") as demo:
     ]
 
     # ========================================================
-    # EVENTS
+    # BUTTON EVENTS
     # ========================================================
 
     run_button.click(
-        run_query,
+        fn=run_query,
         inputs=question,
         outputs=outputs
     )
 
     question.submit(
-        run_query,
+        fn=run_query,
         inputs=question,
         outputs=outputs
     )
 
     refresh_button.click(
-        refresh_schema,
+        fn=refresh_schema,
         inputs=None,
         outputs=refresh_status
     )
 
 
 # ============================================================
-# START APPLICATION
+# APPLICATION ENTRY POINT
 # ============================================================
 
 if __name__ == "__main__":
-    demo.launch()
+
+    print("=" * 55)
+    print("       QUERY PILOT - STARTING APPLICATION")
+    print("=" * 55)
+
+    print(f"Port: {PORT}")
+
+    demo.launch(
+        server_name="0.0.0.0",
+        server_port=PORT,
+        share=False,
+        show_error=True
+    )

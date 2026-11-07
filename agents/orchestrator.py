@@ -20,7 +20,7 @@ class NL2SQLOrchestrator:
 
     def refresh_rag(self):
         """
-        Refresh/reload the schema retriever.
+        Refresh/reload the database schema index.
         """
         self.retriever.refresh()
 
@@ -53,26 +53,21 @@ class NL2SQLOrchestrator:
         # 2. RAG / SCHEMA RETRIEVAL
         # ====================================================
 
-        retrieved = self.retriever.retrieve(question)
+        retrieved = self.retriever.retrieve(
+            question
+        )
 
         trace.append(
             f"2. RAG retrieved {len(retrieved)} "
             f"schema documents."
         )
 
-        # ----------------------------------------------------
-        # IMPORTANT:
-        # Do NOT send an empty schema to the LLM.
-        # ----------------------------------------------------
-
         if not retrieved:
 
             raise ValueError(
                 "No database schema was retrieved from RAG.\n\n"
-                "Please make sure your database schema has been "
-                "indexed into Qdrant.\n\n"
-                "Run:\n"
-                "python scripts/index_database_schema.py"
+                "Please make sure your database connection "
+                "is working and the schema index can be built."
             )
 
         # ====================================================
@@ -87,9 +82,8 @@ class NL2SQLOrchestrator:
 
             raise ValueError(
                 "Database schema context is empty.\n\n"
-                "The RAG retriever returned documents, but they "
-                "contained no usable schema information.\n\n"
-                "Please check your Qdrant schema indexing."
+                "The RAG retriever returned documents, "
+                "but they contained no usable schema information."
             )
 
         trace.append(
@@ -124,10 +118,6 @@ class NL2SQLOrchestrator:
             schema_context
         )
 
-        # ----------------------------------------------------
-        # Validate LLM response BEFORE SQLGlot
-        # ----------------------------------------------------
-
         if not sql or not sql.strip():
 
             raise ValueError(
@@ -136,7 +126,7 @@ class NL2SQLOrchestrator:
 
         sql = sql.strip()
 
-        # Remove Markdown SQL fences if the LLM returns them.
+        # Remove Markdown SQL fences
         if sql.startswith("```sql"):
             sql = sql[6:]
 
@@ -148,9 +138,9 @@ class NL2SQLOrchestrator:
 
         sql = sql.strip()
 
-        # ----------------------------------------------------
-        # Detect schema-insufficient response
-        # ----------------------------------------------------
+        # ====================================================
+        # SCHEMA INSUFFICIENT CHECK
+        # ====================================================
 
         if sql.upper() == "SCHEMA_INSUFFICIENT":
 
@@ -159,9 +149,9 @@ class NL2SQLOrchestrator:
                 "to generate this SQL query."
             )
 
-        # ----------------------------------------------------
-        # Prevent explanatory LLM text from reaching SQLGlot
-        # ----------------------------------------------------
+        # ====================================================
+        # INVALID LLM RESPONSE CHECK
+        # ====================================================
 
         invalid_prefixes = (
             "I cannot",
@@ -174,7 +164,10 @@ class NL2SQLOrchestrator:
         )
 
         if sql.lower().startswith(
-            tuple(prefix.lower() for prefix in invalid_prefixes)
+            tuple(
+                prefix.lower()
+                for prefix in invalid_prefixes
+            )
         ):
 
             raise ValueError(
@@ -200,11 +193,15 @@ class NL2SQLOrchestrator:
 
         result = None
 
-        for attempt in range(MAX_SQL_RETRIES + 1):
+        for attempt in range(
+            MAX_SQL_RETRIES + 1
+        ):
 
             try:
 
-                result = execute_readonly(sql)
+                result = execute_readonly(
+                    sql
+                )
 
                 trace.append(
                     f"5. PostgreSQL execution succeeded "
@@ -225,7 +222,6 @@ class NL2SQLOrchestrator:
                 # --------------------------------------------
 
                 if attempt >= MAX_SQL_RETRIES:
-
                     raise
 
                 trace.append(
@@ -265,7 +261,10 @@ class NL2SQLOrchestrator:
 
                 sql = sql.strip()
 
-                # Detect insufficient schema
+                # --------------------------------------------
+                # SCHEMA INSUFFICIENT
+                # --------------------------------------------
+
                 if sql.upper() == "SCHEMA_INSUFFICIENT":
 
                     raise ValueError(
@@ -273,11 +272,15 @@ class NL2SQLOrchestrator:
                         "SQL because the schema is insufficient."
                     )
 
-                # Validate corrected SQL
+                # --------------------------------------------
+                # VALIDATE CORRECTED SQL
+                # --------------------------------------------
+
                 validate_sql(sql)
 
                 trace.append(
-                    f"5.{attempt + 1}. Corrected SQL validated."
+                    f"5.{attempt + 1}. "
+                    "Corrected SQL validated."
                 )
 
         # ====================================================

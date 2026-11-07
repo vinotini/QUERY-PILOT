@@ -8,6 +8,9 @@ from rag.vector_store import VectorStore
 class SchemaRetriever:
 
     def __init__(self):
+
+        print("[RAG] Initializing Schema Retriever...")
+
         self.store = VectorStore()
         self.embedder = LocalEmbedder()
 
@@ -35,7 +38,8 @@ class SchemaRetriever:
         )
 
         print(
-            f"[RAG] Indexed {len(documents)} schema documents."
+            f"[RAG] Indexed {len(documents)} "
+            f"schema documents."
         )
 
     # =========================================================
@@ -47,7 +51,7 @@ class SchemaRetriever:
         if not question or not question.strip():
             return []
 
-        k = top_k or RAG_TOP_K
+        k = top_k if top_k is not None else RAG_TOP_K
 
         results = self.store.search(
             question,
@@ -55,13 +59,14 @@ class SchemaRetriever:
         )
 
         if not results:
+
             print(
-                "[RAG] WARNING: No schema documents retrieved."
+                "[RAG] WARNING: "
+                "No schema documents retrieved."
             )
 
             return []
 
-        # Remove invalid retrieval results
         valid_results = []
 
         for item in results:
@@ -97,19 +102,24 @@ class SchemaRetriever:
 
         for item in results:
 
-            text = item.get("text", "").strip()
+            text = item.get(
+                "text",
+                ""
+            ).strip()
 
             if not text:
                 continue
 
-            score = item.get("score", 0.0)
+            score = item.get(
+                "score",
+                0.0
+            )
 
             context_parts.append(
                 f"{text}\n"
                 f"RETRIEVAL SCORE: {score:.4f}"
             )
 
-        if not context_parts:
-            return ""
-
-        return "\n\n".join(context_parts)
+        return "\n\n".join(
+            context_parts
+        )

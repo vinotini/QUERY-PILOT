@@ -1,15 +1,39 @@
-from sklearn.feature_extraction.text import TfidfVectorizer
+from sentence_transformers import SentenceTransformer
+
 
 class LocalEmbedder:
+
     def __init__(self):
-        self.vectorizer = TfidfVectorizer(
-            lowercase=True,
-            stop_words="english",
-            ngram_range=(1, 2)
+
+        print(
+            "[EMBEDDINGS] Loading "
+            "all-MiniLM-L6-v2..."
         )
 
+        self.model = SentenceTransformer(
+            "all-MiniLM-L6-v2"
+        )
+
+    # =========================================================
+    # EMBED DOCUMENTS
+    # =========================================================
+
     def fit(self, texts):
-        return self.vectorizer.fit_transform(texts)
+
+        return self.model.encode(
+            texts,
+            normalize_embeddings=True,
+            convert_to_numpy=True
+        )
+
+    # =========================================================
+    # EMBED QUERY
+    # =========================================================
 
     def transform(self, texts):
-        return self.vectorizer.transform(texts)
+
+        return self.model.encode(
+            texts,
+            normalize_embeddings=True,
+            convert_to_numpy=True
+        )
